@@ -1,0 +1,22 @@
+{
+  "name": "pico-steamlink-apk",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "fetch": "node src/main.js",
+    "format": "biome format --write .",
+    "format:check": "biome format ."
+  },
+  "dependencies": {
+    "@actions/core": "^3.0.1",
+    "@actions/github": "^9.1.1",
+    "libsodium-wrappers": "^0.8.4"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.6"
+  }
+}

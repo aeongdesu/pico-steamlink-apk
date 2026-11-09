@@ -1,0 +1,82 @@
+name: Publish APK
+
+# secrets: PICO_EMAIL, PICO_PASSWORD, and GH_PAT (fine-grained PAT with secrets: read & write)
+# the PICO_SESSION secret is created and refreshed automatically by the workflow
+on:
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: steamlink-apk-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-slim
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm and Node.js
+        uses: pnpm/setup@v3
+        with:
+          version: latest
+          runtime: node@latest
+          require-lockfile: true
+
+      - name: Fetch APKs from PICO Store
+        id: fetch
+        env:
+          PICO_EMAIL: ${{ secrets.PICO_EMAIL }}
+          PICO_PASSWORD: ${{ secrets.PICO_PASSWORD }}
+          PICO_SESSION: ${{ secrets.PICO_SESSION }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm run fetch
+
+      - name: Upload stable draft
+        if: steps.fetch.outputs.stable_release == 'true'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.fetch.outputs.stable_tag }}
+          name: ${{ steps.fetch.outputs.stable_name }}
+          body_path: .github/release_note.md
+          files: ${{ steps.fetch.outputs.stable_apk }}
+          fail_on_unmatched_files: true
+          draft: true
+          prerelease: false
+
+      - name: Upload beta draft
+        if: steps.fetch.outputs.beta_release == 'true'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.fetch.outputs.beta_tag }}
+          name: ${{ steps.fetch.outputs.beta_name }}
+          body_path: .github/release_note.md
+          files: ${{ steps.fetch.outputs.beta_apk }}
+          fail_on_unmatched_files: true
+          draft: true
+          prerelease: true
+
+      - name: Publish stable release
+        if: steps.fetch.outputs.stable_release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.fetch.outputs.stable_tag }}
+        run: gh release edit "$TAG" --draft=false --latest
+
+      - name: Publish beta release
+        if: steps.fetch.outputs.beta_release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.fetch.outputs.beta_tag }}
+        run: gh release edit "$TAG" --draft=false --prerelease
