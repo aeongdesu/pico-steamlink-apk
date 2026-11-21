@@ -16,7 +16,7 @@ async function publishChannel(channel, session) {
   })
   const version = apk.version.replace(/[^0-9A-Za-z._-]+/g, "-")
   const tag = `steamlink-${channel.name}-v${version}-${apk.versionCode}`
-  const name = `Steam Link ${version} (${channel.name})`
+  const name = `Steam Link ${version}-${apk.versionCode} (${channel.name})`
 
   core.setOutput(`${channel.name}_tag`, tag)
   core.setOutput(`${channel.name}_name`, name)
